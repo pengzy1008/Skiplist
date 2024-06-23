@@ -14,7 +14,3 @@ message(main)
 add_executable(stress_test test/stress_test.cpp)
 
 message(stress_test)
-
-add_executable(create_node_test test/create_node_test.cpp)
-
-message(create_node_test)

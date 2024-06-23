@@ -56,7 +56,7 @@ Skiplist<KeyType, ValueType>::~Skiplist()
 }
 
 template <typename KeyType, typename ValueType>
-bool Skiplist<KeyType, ValueType>::insert_node(KeyType key, ValueType value)
+bool Skiplist<KeyType, ValueType>::insert_node(const KeyType key, const ValueType value)
 {
     mutex_.lock();
     // 先查找待插入元素的位置
@@ -108,14 +108,14 @@ bool Skiplist<KeyType, ValueType>::insert_node(KeyType key, ValueType value)
 }
 
 template <typename KeyType, typename ValueType>
-bool Skiplist<KeyType, ValueType>::delete_node(KeyType key)
+bool Skiplist<KeyType, ValueType>::delete_node(const KeyType key)
 {
     mutex_.lock(); // 上锁，互斥访问
 
     // 删除元素和插入元素的过程基本相同，也是先找待删除元素的前一个元素的位置，再将待删除元素删除
     Node<KeyType, ValueType> *current_ptr = header_;
-    Node<KeyType, ValueType> *update[current_level_];
-    memset(update, 0, sizeof(Node<KeyType, ValueType>*) * current_level_);
+    Node<KeyType, ValueType> *update[current_level_ + 1];
+    memset(update, 0, sizeof(Node<KeyType, ValueType>*) * (current_level_ + 1));
 
     // 1. 寻找潜在的待删除节点在跳表中的每一层的前驱节点的位置，加入到update数组中。
     // 为了利用跳表的查询高效性，从最高层开始遍历
@@ -168,7 +168,7 @@ bool Skiplist<KeyType, ValueType>::delete_node(KeyType key)
 }
 
 template <typename KeyType, typename ValueType>
-ValueType Skiplist<KeyType, ValueType>::search_node(KeyType key)
+ValueType Skiplist<KeyType, ValueType>::search_node(const KeyType key)
 {
     mutex_.lock();
 

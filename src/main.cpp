@@ -7,7 +7,7 @@ int main()
     int cmd = 0;
     int key;
     std::string value;
-    Skiplist<int, std::string> skiplist(10);
+    Skiplist<int, std::string> skiplist(20);
 
     bool stop = false;
 

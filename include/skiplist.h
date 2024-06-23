@@ -17,7 +17,7 @@ public:
 
     bool insert_node(KeyType key, ValueType value); // 增加和修改
     bool delete_node(KeyType key);                  // 删除
-    ValueType search_node(KeyType key);                  // 查找
+    ValueType search_node(KeyType key);             // 查找
 
     void print_skiplist(); // 输出当前的skiplist，按层输出
 
@@ -67,7 +67,7 @@ bool Skiplist<KeyType, ValueType>::insert_node(const KeyType key, const ValueTyp
     // 从最高层开始，从头遍历跳表，获取待插入节点在每一层的前驱节点
     for (int current_level = current_level_; current_level >= 0; --current_level)
     {
-        while (current_ptr->forward_[current_level] != NULL && current_ptr->forward_[current_level]->get_key() < key)
+        while (current_ptr->forward_[current_level] != nullptr && current_ptr->forward_[current_level]->get_key() < key)
         {
             current_ptr = current_ptr->forward_[current_level];
         }
@@ -97,9 +97,8 @@ bool Skiplist<KeyType, ValueType>::insert_node(const KeyType key, const ValueTyp
             new_node->forward_[level] = update[level]->forward_[level];
             update[level]->forward_[level] = new_node;
         }
-        elements_count_++;  // 元素数量增加
+        elements_count_++; // 元素数量增加
         mutex_.unlock();
-        std::cout << "Successfully insert key [" << key << "] with level [" << new_node_level << "]." << std::endl;
         return true;
     }
     mutex_.unlock();
@@ -115,13 +114,13 @@ bool Skiplist<KeyType, ValueType>::delete_node(const KeyType key)
     // 删除元素和插入元素的过程基本相同，也是先找待删除元素的前一个元素的位置，再将待删除元素删除
     Node<KeyType, ValueType> *current_ptr = header_;
     Node<KeyType, ValueType> *update[current_level_ + 1];
-    memset(update, 0, sizeof(Node<KeyType, ValueType>*) * (current_level_ + 1));
+    memset(update, 0, sizeof(Node<KeyType, ValueType> *) * (current_level_ + 1));
 
     // 1. 寻找潜在的待删除节点在跳表中的每一层的前驱节点的位置，加入到update数组中。
     // 为了利用跳表的查询高效性，从最高层开始遍历
     for (int level = current_level_; level >= 0; --level)
     {
-        while (current_ptr->forward_[level] != nullptr && current_ptr->forward_[level]->get_key() < key) 
+        while (current_ptr->forward_[level] != nullptr && current_ptr->forward_[level]->get_key() < key)
         {
             current_ptr = current_ptr->forward_[level];
         }
@@ -132,7 +131,7 @@ bool Skiplist<KeyType, ValueType>::delete_node(const KeyType key)
     current_ptr = current_ptr->forward_[0];
 
     // 检查current_ptr指向的是否就是我们要删除的
-    if (current_ptr != nullptr && current_ptr->get_key() == key) 
+    if (current_ptr != nullptr && current_ptr->get_key() == key)
     {
         // 从底层到高层删除这个节点
         for (int level = 0; level <= current_ptr->level_; ++level)
@@ -146,12 +145,14 @@ bool Skiplist<KeyType, ValueType>::delete_node(const KeyType key)
         delete current_ptr;
 
         // 检查Skiplist的顶层，如果顶层的header_->forward[level]指向了nullptr，就将skiplist的层数降低
-        for (int level = current_level_; level >= 0; --level) 
+        for (int level = current_level_; level >= 0; --level)
         {
-            if (header_->forward_[level] == nullptr) 
+            if (header_->forward_[level] == nullptr)
             {
                 current_level_--;
-            } else {
+            }
+            else
+            {
                 break;
             }
         }
@@ -172,7 +173,7 @@ ValueType Skiplist<KeyType, ValueType>::search_node(const KeyType key)
 {
     mutex_.lock();
 
-    Node<KeyType, ValueType>* current_ptr = header_;
+    Node<KeyType, ValueType> *current_ptr = header_;
 
     for (int level = current_level_; level >= 0; level--)
     {
@@ -216,8 +217,8 @@ void Skiplist<KeyType, ValueType>::print_skiplist()
 template <typename KeyType, typename ValueType>
 Node<KeyType, ValueType> *Skiplist<KeyType, ValueType>::create_node(const KeyType key, const ValueType value, int level)
 {
-    Node<KeyType, ValueType> *new_node = new Node<KeyType, ValueType>(key, value, level);
-    return new_node;
+    Node<KeyType, ValueType> *node = new Node<KeyType, ValueType>(key, value, level);
+    return node;
 }
 
 template <typename KeyType, typename ValueType>

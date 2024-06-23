@@ -4,6 +4,7 @@
 #include <ctime>
 #include <iostream>
 #include <random>
+#include <mutex>
 
 #include "node.h"
 
@@ -15,8 +16,8 @@ public:
     ~Skiplist();
 
     bool insert_node(KeyType key, ValueType value); // 增加和修改
-    void delete_node(KeyType key);                  // 删除
-    bool search_node(KeyType key);                  // 查找
+    bool delete_node(KeyType key);                  // 删除
+    ValueType search_node(KeyType key);                  // 查找
 
     void print_skiplist(); // 输出当前的skiplist，按层输出
 
@@ -27,10 +28,12 @@ private:
 
 private:
     int max_level_;      // skiplist的最大层数
-    int current_level_;  // skiplist当前的层数
+    int current_level_;  // skiplist当前的层数, current_level_为多少，数组下标就可以取到多少，这个是考虑到的
     int elements_count_; // skiplist中元素的个数
 
     Node<KeyType, ValueType> *header_;
+
+    std::mutex mutex_;
 };
 
 template <typename KeyType, typename ValueType>
@@ -49,16 +52,13 @@ Skiplist<KeyType, ValueType>::Skiplist(int max_level)
 template <typename KeyType, typename ValueType>
 Skiplist<KeyType, ValueType>::~Skiplist()
 {
-    if (header_ != nullptr)
-    {
-        clear(header_);
-    }
-    header_ = nullptr;
+    clear(header_);
 }
 
 template <typename KeyType, typename ValueType>
 bool Skiplist<KeyType, ValueType>::insert_node(KeyType key, ValueType value)
 {
+    mutex_.lock();
     // 先查找待插入元素的位置
     Node<KeyType, ValueType> *current_ptr = header_;
     Node<KeyType, ValueType> *update[max_level_]; // 记录待插入节点在每一个level的前驱
@@ -79,7 +79,7 @@ bool Skiplist<KeyType, ValueType>::insert_node(KeyType key, ValueType value)
     // update中已经保存了待插入节点在每一个level的前驱节点的位置，下面开始尝试插入节点
 
     // 首先检查current_ptr的值，current_ptr在上一轮结束后，现在指向的最底层待插入节点的前驱节点的下一个节点
-    if (current_ptr == NULL || current_ptr->get_key() != key)
+    if (current_ptr == nullptr || current_ptr->get_key() != key)
     {
         // 条件通过，表示数据库中没有这个待插入的键
         int new_node_level = get_random_node_level(); // 随机设置一个节点的level，这个level服从n重伯努利分布
@@ -97,16 +97,110 @@ bool Skiplist<KeyType, ValueType>::insert_node(KeyType key, ValueType value)
             new_node->forward_[level] = update[level]->forward_[level];
             update[level]->forward_[level] = new_node;
         }
-        std::cout << "Successfully insert key [" << key << "] at level [" << new_node_level << "]." << std::endl;
+        elements_count_++;  // 元素数量增加
+        mutex_.unlock();
+        std::cout << "Successfully insert key [" << key << "] with level [" << new_node_level << "]." << std::endl;
         return true;
     }
-    std::cout << "Key [" << key << "] already exists, corresponding value [" << current_ptr->get_value() << "] insertion failed." << std::endl;
+    mutex_.unlock();
+    std::cout << "Key [" << key << "] already exists, corresponding value [" << current_ptr->get_value() << "], insertion failed." << std::endl;
     return false;
+}
+
+template <typename KeyType, typename ValueType>
+bool Skiplist<KeyType, ValueType>::delete_node(KeyType key)
+{
+    mutex_.lock(); // 上锁，互斥访问
+
+    // 删除元素和插入元素的过程基本相同，也是先找待删除元素的前一个元素的位置，再将待删除元素删除
+    Node<KeyType, ValueType> *current_ptr = header_;
+    Node<KeyType, ValueType> *update[current_level_];
+    memset(update, 0, sizeof(Node<KeyType, ValueType>*) * current_level_);
+
+    // 1. 寻找潜在的待删除节点在跳表中的每一层的前驱节点的位置，加入到update数组中。
+    // 为了利用跳表的查询高效性，从最高层开始遍历
+    for (int level = current_level_; level >= 0; --level)
+    {
+        while (current_ptr->forward_[level] != nullptr && current_ptr->forward_[level]->get_key() < key) 
+        {
+            current_ptr = current_ptr->forward_[level];
+        }
+        update[level] = current_ptr;
+    }
+
+    // current_ptr继续往前指，即可之前这个潜在的将要被删除的节点
+    current_ptr = current_ptr->forward_[0];
+
+    // 检查current_ptr指向的是否就是我们要删除的
+    if (current_ptr != nullptr && current_ptr->get_key() == key) 
+    {
+        // 从底层到高层删除这个节点
+        for (int level = 0; level <= current_ptr->level_; ++level)
+        {
+            // update[level]表示这个待删除节点的前驱节点
+            update[level]->forward_[level] = current_ptr->forward_[level];
+            current_ptr->forward_[level] = nullptr;
+        }
+        ValueType deleted_node_value = current_ptr->get_value();
+        int deleted_node_level = current_ptr->level_;
+        delete current_ptr;
+
+        // 检查Skiplist的顶层，如果顶层的header_->forward[level]指向了nullptr，就将skiplist的层数降低
+        for (int level = current_level_; level >= 0; --level) 
+        {
+            if (header_->forward_[level] == nullptr) 
+            {
+                current_level_--;
+            } else {
+                break;
+            }
+        }
+        elements_count_--;
+        mutex_.unlock();
+        std::cout << "Successfully delete key [" << key << "] with value [" << deleted_node_value << "], level [" << deleted_node_level << "]." << std::endl;
+        return true;
+    }
+
+    // 没有要删除的节点，返回失败
+    mutex_.unlock();
+    std::cout << "Key [" << key << "] does not exist, deletion failed." << std::endl;
+    return false;
+}
+
+template <typename KeyType, typename ValueType>
+ValueType Skiplist<KeyType, ValueType>::search_node(KeyType key)
+{
+    mutex_.lock();
+
+    Node<KeyType, ValueType>* current_ptr = header_;
+
+    for (int level = current_level_; level >= 0; level--)
+    {
+        while (current_ptr->forward_[level] != nullptr && current_ptr->forward_[level]->get_key() < key)
+        {
+            current_ptr = current_ptr->forward_[level];
+        }
+    }
+
+    current_ptr = current_ptr->forward_[0];
+
+    if (current_ptr != nullptr && current_ptr->get_key() == key)
+    {
+        ValueType value = current_ptr->get_value();
+        mutex_.unlock();
+        std::cout << "Successfully get value for key [" << key << "], corresponding value [" << value << "]." << std::endl;
+        return value;
+    }
+
+    mutex_.unlock();
+    std::cout << "Key [" << key << "] does not exist, searching failed." << std::endl;
+    return 0;
 }
 
 template <typename KeyType, typename ValueType>
 void Skiplist<KeyType, ValueType>::print_skiplist()
 {
+    mutex_.lock();
     for (int level = current_level_; level >= 0; level--)
     {
         std::cout << "At level [" << level << "]:" << std::endl;
@@ -116,10 +210,11 @@ void Skiplist<KeyType, ValueType>::print_skiplist()
         }
         std::cout << "===================================" << std::endl;
     }
+    mutex_.unlock();
 }
 
 template <typename KeyType, typename ValueType>
-Node<KeyType, ValueType> *Skiplist<KeyType, ValueType>::create_node(KeyType key, ValueType value, int level)
+Node<KeyType, ValueType> *Skiplist<KeyType, ValueType>::create_node(const KeyType key, const ValueType value, int level)
 {
     Node<KeyType, ValueType> *new_node = new Node<KeyType, ValueType>(key, value, level);
     return new_node;

@@ -5,9 +5,9 @@
 #include "skiplist.h"
 
 #define THREAD_NUMS 1
-#define TOTAL_ELEM_NUMS 100000
+#define TOTAL_ELEM_NUMS 1000000
 
-Skiplist<int, std::string> skiplist(22);
+Skiplist<int, std::string> skiplist(18);
 
 // 批量插入数据的函数，根据传入的线程id来设置要插入的键的范围
 void insert_elements(int thread_id)
@@ -47,45 +47,40 @@ void delete_elements(int thread_id)
 
 int main()
 {
+    std::thread threads[THREAD_NUMS];
+    // 数据插入
     auto start_timestamp = std::chrono::high_resolution_clock::now();
-    insert_elements(0);
+    for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
+        threads[thread_id] = std::thread(insert_elements, thread_id);
+    }
+    for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
+        threads[thread_id].join();
+    }
     auto end_timestamp = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end_timestamp - start_timestamp;
-    std::cout << "insert elapsed: " << elapsed.count() << "s" << std::endl;
-    // std::thread threads[THREAD_NUMS];
-    // // 数据插入
-    // auto start_timestamp = std::chrono::high_resolution_clock::now();
-    // for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
-    //     threads[thread_id] = std::thread(insert_elements, thread_id);
-    // }
-    // for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
-    //     threads[thread_id].join();
-    // }
-    // auto end_timestamp = std::chrono::high_resolution_clock::now();
-    // std::chrono::duration<double> elapsed = end_timestamp - start_timestamp;
-    // std::cout << "insert elapsed: " << elapsed.count() << std::endl;
+    std::cout << "insert elapsed: " << elapsed.count() << std::endl;
 
-    // // 数据查询
-    // start_timestamp = std::chrono::high_resolution_clock::now();
-    // for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
-    //     threads[thread_id] = std::thread(search_elements, thread_id);
-    // }
-    // for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
-    //     threads[thread_id].join();
-    // }
-    // end_timestamp = std::chrono::high_resolution_clock::now();
-    // elapsed = end_timestamp - start_timestamp;
-    // std::cout << "search elapsed: " << elapsed.count() << std::endl;
+    // 数据查询
+    start_timestamp = std::chrono::high_resolution_clock::now();
+    for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
+        threads[thread_id] = std::thread(search_elements, thread_id);
+    }
+    for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
+        threads[thread_id].join();
+    }
+    end_timestamp = std::chrono::high_resolution_clock::now();
+    elapsed = end_timestamp - start_timestamp;
+    std::cout << "search elapsed: " << elapsed.count() << std::endl;
 
-    // // 数据删除
-    // start_timestamp = std::chrono::high_resolution_clock::now();
-    // for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
-    //     threads[thread_id] = std::thread(delete_elements, thread_id);
-    // }
-    // for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
-    //     threads[thread_id].join();
-    // }
-    // end_timestamp = std::chrono::high_resolution_clock::now();
-    // elapsed = end_timestamp - start_timestamp;
-    // std::cout << "delete elapsed: " << elapsed.count() << std::endl;
+    // 数据删除
+    start_timestamp = std::chrono::high_resolution_clock::now();
+    for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
+        threads[thread_id] = std::thread(delete_elements, thread_id);
+    }
+    for (int thread_id = 0; thread_id < THREAD_NUMS; ++thread_id) {
+        threads[thread_id].join();
+    }
+    end_timestamp = std::chrono::high_resolution_clock::now();
+    elapsed = end_timestamp - start_timestamp;
+    std::cout << "delete elapsed: " << elapsed.count() << std::endl;
 }

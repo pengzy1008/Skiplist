@@ -158,13 +158,13 @@ bool Skiplist<KeyType, ValueType>::delete_node(const KeyType key)
         }
         elements_count_--;
         mutex_.unlock();
-        std::cout << "Successfully delete key [" << key << "] with value [" << deleted_node_value << "], level [" << deleted_node_level << "]." << std::endl;
+        // std::cout << "Successfully delete key [" << key << "] with value [" << deleted_node_value << "], level [" << deleted_node_level << "]." << std::endl;
         return true;
     }
 
     // 没有要删除的节点，返回失败
     mutex_.unlock();
-    std::cout << "Key [" << key << "] does not exist, deletion failed." << std::endl;
+    // std::cout << "Key [" << key << "] does not exist, deletion failed." << std::endl;
     return false;
 }
 
@@ -189,13 +189,13 @@ ValueType Skiplist<KeyType, ValueType>::search_node(const KeyType key)
     {
         ValueType value = current_ptr->get_value();
         mutex_.unlock();
-        std::cout << "Successfully get value for key [" << key << "], corresponding value [" << value << "]." << std::endl;
+        // std::cout << "Successfully get value for key [" << key << "], corresponding value [" << value << "]." << std::endl;
         return value;
     }
 
     mutex_.unlock();
-    std::cout << "Key [" << key << "] does not exist, searching failed." << std::endl;
-    return 0;
+    // std::cout << "Key [" << key << "] does not exist, searching failed." << std::endl;
+    return 0;   // 有问题，有可能不存在Value到0的隐式转换
 }
 
 template <typename KeyType, typename ValueType>

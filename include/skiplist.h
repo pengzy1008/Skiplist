@@ -245,3 +245,4 @@ void Skiplist<KeyType, ValueType>::clear(Node<KeyType, ValueType> *node)
     delete node;
     node = nullptr;
 }
+
